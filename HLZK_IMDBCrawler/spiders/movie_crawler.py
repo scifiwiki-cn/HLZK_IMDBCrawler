@@ -15,7 +15,7 @@ class MovieSpider(scrapy.Spider):
     name = "movie"
     allowed_domains = ["www.imdb.com", "movie.douban.com"]
 
-    def __init__(self, start = None, end = None, rating = "7.5", filter = True, *args, **kwargs):
+    def __init__(self, start = None, end = None, rating = "7.5", filter = "True", accept_noscore = "False", *args, **kwargs):
         super(MovieSpider, self).__init__(*args, **kwargs)
         url_pattern = "http://www.imdb.com/search/title?title_type=feature,tv_movie,tv_series,tv_special,tv_miniseries,documentary,short&release_date=%d-%s,%d-%s&user_rating=%s,&genres=sci_fi"
         self.start_urls = []
@@ -31,7 +31,12 @@ class MovieSpider(scrapy.Spider):
         self.start_date = start
         self.end_date = end
         self.item_list = {}
-        self.filter = filter
+        self.filter = False
+        self.accept_noscore = False
+        if accept_noscore == "True":
+            self.accept_noscore = True
+        if filter == "True":
+            self.filter = True
 
     def destroy_browser(self):
         self.browser.quit()
@@ -77,7 +82,7 @@ class MovieSpider(scrapy.Spider):
         item_id = response.url.replace("http://www.imdb.com/title/", "").replace("/releaseinfo", "")
         release_date = response.css("table#release_dates tbody > tr:first-child td.release_date::text").extract()[0]
         if match(release_date):
-            if filter:
+            if self.filter:
                 yield Request("https://movie.douban.com/subject_search?search_text=%s" % item_id, callback = self.parse_douban)
         else:
             self.item_list.pop(item_id)
@@ -92,6 +97,11 @@ class MovieSpider(scrapy.Spider):
                 self.item_list[item_id]["douban_rating"] = item.css(".item-root .detail .rating .rating_nums::text").extract()[0]
                 self.item_list[item_id]["douban_link"] = item.css(".item-root .detail .title>a::attr(href)").extract()[0]
                 yield Request(self.item_list[item_id]["douban_link"], callback = self.parse_douban_detail)
+            elif self.accept_noscore:
+                self.item_list[item_id]["douban"] = item.css(".item-root>a::attr(href)").extract()[0]
+                self.item_list[item_id]["chtitle"] = item.css(".item-root .detail .title>a::text").extract()[0]
+                self.item_list[item_id]["douban_link"] = item.css(".item-root .detail .title>a::attr(href)").extract()[0]
+                yield Request(self.item_list[item_id]["douban_link"], callback = self.parse_douban_detail)
             else:
                 self.item_list.pop(item_id)
         except Exception, e:
@@ -99,7 +109,18 @@ class MovieSpider(scrapy.Spider):
 
     def parse_douban_detail(self, response):
         item_id = response.css("#info>a[href^='http://www.imdb.com/title']::text").extract()[0]
-        self.item_list[item_id]["description"] = response.css("#link-report span[property='v:summary']::text").extract()[0]
+        try:
+            comment_count = int(response.css("#comments-section .mod-hd h2 span.pl a::text").extract()[0].replace("全部 ", "").replace(" 条",""))
+            if comment_count != 0:
+                try:
+                    self.item_list[item_id]["description"] = \
+                    response.css("#link-report span[property='v:summary']::text").extract()[0]
+                except:
+                    pass
+            else:
+                self.item_list.pop(item_id)
+        except:
+            self.item_list.pop(item_id)
 
     def closed(self, reason):
         self.destroy_browser()
