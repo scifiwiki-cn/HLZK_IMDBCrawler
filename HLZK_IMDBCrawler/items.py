@@ -20,3 +20,4 @@ class SearchItem(scrapy.Item):
     rating = scrapy.Field()
     genre = scrapy.Field()
     runtime = scrapy.Field()
+    douban = scrapy.Field()
