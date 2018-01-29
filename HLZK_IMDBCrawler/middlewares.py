@@ -4,8 +4,9 @@
 #
 # See documentation in:
 # https://doc.scrapy.org/en/latest/topics/spider-middleware.html
-
+import time
 from scrapy import signals
+from scrapy.http import HtmlResponse
 
 
 class HlzkImdbcrawlerSpiderMiddleware(object):
@@ -54,6 +55,13 @@ class HlzkImdbcrawlerSpiderMiddleware(object):
 
     def spider_opened(self, spider):
         spider.logger.info('Spider opened: %s' % spider.name)
+
+
+    def process_request(self, request, spider):
+        spider.browser.get(request.url)
+        time.sleep(3)
+        content = spider.browser.page_source
+        return HtmlResponse(request.url, encoding = 'utf-8', body = content, request = request)
 
 
 class HlzkImdbcrawlerDownloaderMiddleware(object):
