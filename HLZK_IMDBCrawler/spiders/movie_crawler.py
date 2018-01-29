@@ -19,7 +19,7 @@ class MovieSpider(scrapy.Spider):
         super(MovieSpider, self).__init__(*args, **kwargs)
         url_pattern = "http://www.imdb.com/search/title?title_type=feature,tv_movie,tv_series,tv_special,tv_miniseries,documentary,short&release_date=%d-%s,%d-%s&user_rating=%s,&genres=sci_fi"
         self.start_urls = []
-        for i in range(2015, datetime.datetime.now().year + 1):
+        for i in range(1900, datetime.datetime.now().year + 1):
             self.start_urls.append(url_pattern % (i, start, i, end, rating))
         import sys
         reload(sys)
@@ -75,7 +75,7 @@ class MovieSpider(scrapy.Spider):
                 return False
 
         item_id = response.url.replace("http://www.imdb.com/title/", "").replace("/releaseinfo", "")
-        release_date = response.css("table#release_dates tbody > tr:first-child td.release_date")
+        release_date = response.css("table#release_dates tbody > tr:first-child td.release_date::text").extract()[0]
         if match(release_date):
             if filter:
                 yield Request("https://movie.douban.com/subject_search?search_text=%s" % item_id, callback = self.parse_douban)
