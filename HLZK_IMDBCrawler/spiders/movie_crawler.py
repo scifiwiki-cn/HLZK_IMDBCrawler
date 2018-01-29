@@ -28,6 +28,8 @@ class MovieSpider(scrapy.Spider):
         option.add_argument(
             "--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/59.0.3071.109 Chrome/59.0.3071.109 Safari/537.36")
         self.browser = webdriver.Chrome(options = option, executable_path = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chromedriver.exe")
+        self.start_date = start
+        self.end_date = end
         self.item_list = {}
         self.filter = filter
 
@@ -37,7 +39,6 @@ class MovieSpider(scrapy.Spider):
     def parse(self, response):
 
         def clean(value):
-            result = None
             try:
                 result = value[0]
             except:
@@ -54,9 +55,32 @@ class MovieSpider(scrapy.Spider):
                 genre = clean(item_c.css(".lister-item-content h3.lister-item-header+p.text-muted .genre::text").extract()),
                 runtime = clean(item_c.css(".lister-item-content h3.lister-item-header+p.text-muted .runtime::text").extract())
             )
+            yield Request("http://www.imdb.com/title/%s/releaseinfo" % item_id, callback = self.parse_releaseinfo)
 
+    def parse_releaseinfo(self, response):
+
+        def match(_date):
+            try:
+                day = int(_date[:_date.find(' ')])
+                month_list = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+                for i in range(len(month_list)):
+                    _month = month_list[i]
+                    if _date.find(_month) != -1:
+                        month = i + 1
+                        thisdate = datetime.datetime.now().replace(year = 2016, month = month, day = day)
+                        start_date = datetime.datetime.now().replace(year = 2016, month = int(self.start_date[:2]), day = int(self.start_date[-2:]))
+                        end_date = datetime.datetime.now().replace(year = 2016, month = int(self.end_date[:2]), day = int(self.end_date[-2:]))
+                        return start_date <= thisdate <= end_date
+            except:
+                return False
+
+        item_id = response.url.replace("http://www.imdb.com/title/", "").replace("/releaseinfo", "")
+        release_date = response.css("table#release_dates tbody > tr:first-child td.release_date")
+        if match(release_date):
             if filter:
                 yield Request("https://movie.douban.com/subject_search?search_text=%s" % item_id, callback = self.parse_douban)
+        else:
+            self.item_list.pop(item_id)
 
     def parse_douban(self, response):
         item_id = response.url.replace("https://movie.douban.com/subject_search?search_text=", "")
