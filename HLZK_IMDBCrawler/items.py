@@ -21,3 +21,7 @@ class SearchItem(scrapy.Item):
     genre = scrapy.Field()
     runtime = scrapy.Field()
     douban = scrapy.Field()
+    chtitle = scrapy.Field()
+    douban_link = scrapy.Field()
+    douban_rating = scrapy.Field()
+    description = scrapy.Field()

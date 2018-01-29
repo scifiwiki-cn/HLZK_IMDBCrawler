@@ -56,11 +56,27 @@ class HlzkImdbcrawlerSpiderMiddleware(object):
     def spider_opened(self, spider):
         spider.logger.info('Spider opened: %s' % spider.name)
 
-
     def process_request(self, request, spider):
+
+        import os
+        if os.path.exists("cache/" + request.url.replace(":", "-").replace("?", "-").replace("&", "-").replace('/', "-") + ".html"):
+            with open("cache/" + request.url.replace(":", "-").replace("?", "-").replace("&", "-").replace('/', "-") + ".html", "rb") as f:
+                content = f.read()
+            f.close()
+
+            return HtmlResponse(request.url, encoding = 'utf-8', body = content, request = request)
+
         spider.browser.get(request.url)
         time.sleep(3)
         content = spider.browser.page_source
+
+        if not os.path.isdir("cache"):
+            os.mkdir("cache")
+
+        with open("cache/" + request.url.replace(":", "-").replace("?", "-").replace("&", "-").replace('/', "-") + ".html", "wb") as f:
+            f.write(content)
+        f.close()
+
         return HtmlResponse(request.url, encoding = 'utf-8', body = content, request = request)
 
 

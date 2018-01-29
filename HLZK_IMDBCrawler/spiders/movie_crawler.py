@@ -19,7 +19,7 @@ class MovieSpider(scrapy.Spider):
         super(MovieSpider, self).__init__(*args, **kwargs)
         url_pattern = "http://www.imdb.com/search/title?title_type=feature,tv_movie,tv_series,tv_special,tv_miniseries,documentary,short&release_date=%d-%s,%d-%s&user_rating=%s,&genres=sci_fi"
         self.start_urls = []
-        for i in range(2017, 2018):# datetime.datetime.now().year + 1):
+        for i in range(2015, datetime.datetime.now().year + 1):
             self.start_urls.append(url_pattern % (i, start, i, end, rating))
         import sys
         reload(sys)
@@ -64,10 +64,18 @@ class MovieSpider(scrapy.Spider):
             item = response.css(".sc-dnqmqq.eXEXeG div:first-child")
             if item.css(".item-root .detail .pl::text").extract()[0] != "(暂无评分)":
                 self.item_list[item_id]["douban"] = item.css(".item-root>a::attr(href)").extract()[0]
+                self.item_list[item_id]["chtitle"] = item.css(".item-root .detail .title>a::text").extract()[0]
+                self.item_list[item_id]["douban_rating"] = item.css(".item-root .detail .rating .rating_nums::text").extract()[0]
+                self.item_list[item_id]["douban_link"] = item.css(".item-root .detail .title>a::attr(href)").extract()[0]
+                yield Request(self.item_list[item_id]["douban_link"], callback = self.parse_douban_detail)
             else:
                 self.item_list.pop(item_id)
         except Exception, e:
             self.item_list.pop(item_id)
+
+    def parse_douban_detail(self, response):
+        item_id = response.css("#info>a[href^='http://www.imdb.com/title']::text").extract()[0]
+        self.item_list[item_id]["description"] = response.css("#link-report span[property='v:summary']::text").extract()[0]
 
     def closed(self, reason):
         self.destroy_browser()
@@ -77,7 +85,7 @@ class MovieSpider(scrapy.Spider):
     def save_result(self):
         with open('search_result.csv', 'wb') as csvfile:
             csvfile.write(codecs.BOM_UTF8)
-            fieldnames = ['name', 'link', 'rating', 'genre', 'runtime', 'douban']
+            fieldnames = ['name', 'link', 'rating', 'genre', 'runtime', 'douban', 'chtitle', 'douban_rating', 'douban_link', "description"]
             writer = csv.DictWriter(csvfile, fieldnames = fieldnames)
             writer.writeheader()
             for item in self.item_list:
