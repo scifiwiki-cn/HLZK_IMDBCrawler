@@ -15,7 +15,7 @@ class MovieSpider(scrapy.Spider):
     name = "movie"
     allowed_domains = ["www.imdb.com", "movie.douban.com"]
 
-    def __init__(self, start = None, end = None, rating = "7.5", *args, **kwargs):
+    def __init__(self, start = None, end = None, rating = "7.5", filter = True, *args, **kwargs):
         super(MovieSpider, self).__init__(*args, **kwargs)
         url_pattern = "http://www.imdb.com/search/title?title_type=feature,tv_movie,tv_series,tv_special,tv_miniseries,documentary,short&release_date=%d-%s,%d-%s&user_rating=%s,&genres=sci_fi"
         self.start_urls = []
@@ -29,6 +29,7 @@ class MovieSpider(scrapy.Spider):
             "--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/59.0.3071.109 Chrome/59.0.3071.109 Safari/537.36")
         self.browser = webdriver.Chrome(options = option, executable_path = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chromedriver.exe")
         self.item_list = {}
+        self.filter = filter
 
     def destroy_browser(self):
         self.browser.quit()
@@ -54,7 +55,8 @@ class MovieSpider(scrapy.Spider):
                 runtime = clean(item_c.css(".lister-item-content h3.lister-item-header+p.text-muted .runtime::text").extract())
             )
 
-            yield Request("https://movie.douban.com/subject_search?search_text=%s" % item_id, callback = self.parse_douban)
+            if filter:
+                yield Request("https://movie.douban.com/subject_search?search_text=%s" % item_id, callback = self.parse_douban)
 
     def parse_douban(self, response):
         item_id = response.url.replace("https://movie.douban.com/subject_search?search_text=", "")
