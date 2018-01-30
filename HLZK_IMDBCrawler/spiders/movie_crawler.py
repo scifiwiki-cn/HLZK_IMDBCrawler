@@ -15,7 +15,7 @@ class MovieSpider(scrapy.Spider):
     name = "movie"
     allowed_domains = ["www.imdb.com", "movie.douban.com"]
 
-    def __init__(self, start = None, end = None, rating = "7.5", filter = "True", accept_noscore = "False", *args, **kwargs):
+    def __init__(self, start = None, end = None, rating = "5.0", filter = "True", accept_noscore = "False", *args, **kwargs):
         super(MovieSpider, self).__init__(*args, **kwargs)
         url_pattern = "http://www.imdb.com/search/title?title_type=feature,tv_movie,tv_series,tv_special,tv_miniseries,documentary,short&release_date=%d-%s,%d-%s&user_rating=%s,&genres=sci_fi"
         self.start_urls = []
@@ -50,6 +50,12 @@ class MovieSpider(scrapy.Spider):
                 result = ""
             return result
 
+        def parse_runtime(runtime):
+            if runtime == "":
+                return runtime
+            else:
+                return int(runtime[:runtime.find(" ")])
+
         result_list = response.css(".lister-list .lister-item.mode-advanced")
         for item_c in result_list:
             item_id = item_c.css(".lister-item-content h3.lister-item-header a::attr(href)").extract()[0].replace("/title/", "").replace("/?ref_=adv_li_tt", "")
@@ -58,7 +64,7 @@ class MovieSpider(scrapy.Spider):
                 link = "http://www.imdb.com%s" % item_c.css(".lister-item-content h3.lister-item-header a::attr(href)").extract()[0],
                 rating = clean(item_c.css(".lister-item-content .ratings-bar .ratings-imdb-rating::attr(data-value)").extract()),
                 genre = clean(item_c.css(".lister-item-content h3.lister-item-header+p.text-muted .genre::text").extract()),
-                runtime = clean(item_c.css(".lister-item-content h3.lister-item-header+p.text-muted .runtime::text").extract())
+                runtime = parse_runtime(clean(item_c.css(".lister-item-content h3.lister-item-header+p.text-muted .runtime::text").extract()))
             )
             yield Request("http://www.imdb.com/title/%s/releaseinfo" % item_id, callback = self.parse_releaseinfo)
 
