@@ -1,8 +1,10 @@
 # coding=utf-8
+import codecs
 import time
+import csv
 from selenium import webdriver
 from selenium.webdriver.support.wait import WebDriverWait
-
+import argparse
 
 def generate_title(title):
     return '''
@@ -61,7 +63,7 @@ def generate_celebrity(celebrity):
 
 
 def generate_movie(movie):
-    if "title" in movie:
+    if "title" in movie and movie["title"].replace(" ", "") != "":
         movie["title"] = '''
             <p style="max-width: 100%%;min-height: 1em;text-align: center;box-sizing: border-box !important;word-wrap: break-word !important;">
                 <span style="max-width: 100%%;color: rgb(119, 119, 119);box-sizing: border-box !important;word-wrap: break-word !important;">
@@ -126,6 +128,25 @@ def generate_full(celebrity_list, movie_list):
     return [item.replace("\n", "").replace("%%", "%").strip() for item in result]
 
 
+parser = argparse.ArgumentParser()
+parser.add_argument("-c", "--celebrity")
+parser.add_argument("-m", "--movie")
+args = parser.parse_args()
+
+with open(args.celebrity, 'r') as csvfile:
+    fieldnames = ["name", "title", "introduction"]
+    reader = csv.DictReader(csvfile, fieldnames = fieldnames)
+    next(reader)
+    celebrity_list = [item for item in reader]
+    csvfile.close()
+
+with open(args.movie, 'r') as csvfile:
+    fieldnames = ["name", "title", "introduction"]
+    reader = csv.DictReader(csvfile, fieldnames = fieldnames)
+    next(reader)
+    movie_list = [item for item in reader]
+    csvfile.close()
+
 option = webdriver.ChromeOptions()
 option.add_argument(
     "--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/59.0.3071.109 Chrome/59.0.3071.109 Safari/537.36")
@@ -150,7 +171,7 @@ script = '''
     article_container.empty();
 '''
 
-for item in generate_full(celebrity_list = [{"name": "汉斯·鲁道夫·吉格尔", "title": "异形造型师", "introduction": "瑞士艺术家汉斯·鲁道夫·吉格尔（Hans Rudolf Giger）出生于格劳宾登州库尔。吉格尔曾为《异形》（Alien）设计外星生物，并因此获得奥斯卡金像奖的最佳视觉效果奖。2013年，吉格尔被列入科幻与奇幻名人堂。"}], movie_list = []):
+for item in generate_full(celebrity_list = celebrity_list, movie_list = movie_list):
     script += '''
         article = '%s';
         article_container.append($(article));
@@ -162,4 +183,3 @@ for item in generate_full(celebrity_list = [{"name": "汉斯·鲁道夫·吉格�
     ''' % item
 
 browser.execute_script(script)
-
