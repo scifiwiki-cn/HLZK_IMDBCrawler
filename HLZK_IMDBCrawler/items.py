@@ -25,3 +25,9 @@ class SearchItem(scrapy.Item):
     douban_link = scrapy.Field()
     douban_rating = scrapy.Field()
     description = scrapy.Field()
+
+
+class Celebrity(scrapy.Item):
+    year = scrapy.Field()
+    event = scrapy.Field()
+    date = scrapy.Field()
