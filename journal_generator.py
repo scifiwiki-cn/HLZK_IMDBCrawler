@@ -1,10 +1,13 @@
 # coding=utf-8
-import codecs
 import time
 import csv
+
+import os
+import wx
 from selenium import webdriver
 from selenium.webdriver.support.wait import WebDriverWait
 import argparse
+
 
 def generate_title(title):
     return '''
@@ -128,25 +131,6 @@ def generate_full(celebrity_list, movie_list):
     return [item.replace("\n", "").replace("%%", "%").strip() for item in result]
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument("-c", "--celebrity")
-parser.add_argument("-m", "--movie")
-args = parser.parse_args()
-
-with open(args.celebrity, 'r') as csvfile:
-    fieldnames = ["name", "title", "introduction"]
-    reader = csv.DictReader(csvfile, fieldnames = fieldnames)
-    next(reader)
-    celebrity_list = [item for item in reader]
-    csvfile.close()
-
-with open(args.movie, 'r') as csvfile:
-    fieldnames = ["name", "title", "introduction"]
-    reader = csv.DictReader(csvfile, fieldnames = fieldnames)
-    next(reader)
-    movie_list = [item for item in reader]
-    csvfile.close()
-
 option = webdriver.ChromeOptions()
 option.add_argument(
     "--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/59.0.3071.109 Chrome/59.0.3071.109 Safari/537.36")
@@ -156,30 +140,78 @@ browser = webdriver.Chrome(options = option,
 browser.get('http://mp.weixin.qq.com')
 
 
-def passed(driver):
-    print driver.current_url
-    return driver.current_url.find("t=media/appmsg_edit&action=edit") != -1 or driver.current_url.find("t=media/appmsg_edit_v2&action=edit") != -1
+class my_frame(wx.Frame):
+    """We simple derive a new class of Frame"""
+
+    def __init__(self, parent, title):
+        wx.Frame.__init__(self, parent, title = title, size = (350, 180))
+        panel = wx.Panel(self, -1)
+        self.celebrity_button = wx.Button(panel, -1, "选择人物档案", pos = (50, 20))
+        self.movie_button = wx.Button(panel, -1, "选择作品档案", pos = (200, 20))
+        self.flush_button = wx.Button(panel, -1, "确认刷入", pos = (120, 80))
+        self.Bind(wx.EVT_BUTTON, self.open_celebrity_selector, self.celebrity_button)
+        self.Bind(wx.EVT_BUTTON, self.open_movie_selector, self.movie_button)
+        self.Bind(wx.EVT_BUTTON, self.flush_data, self.flush_button)
+        self.celebrity_button.SetDefault()
+        self.movie_button.SetDefault()
+        self.celebrity_path = None
+        self.movie_path = None
+
+    def open_celebrity_selector(self, event):
+        dialog = wx.FileDialog(self, "Open file...", os.getcwd(), wildcard = "*.csv")
+        if dialog.ShowModal() == wx.ID_OK:
+            self.celebrity_path = dialog.GetPath()
+        dialog.Destroy()
+
+    def open_movie_selector(self, event):
+        dialog = wx.FileDialog(self, "Open file...", os.getcwd(), wildcard = "*.csv")
+        if dialog.ShowModal() == wx.ID_OK:
+            self.movie_path = dialog.GetPath()
+        dialog.Destroy()
+
+    def flush_data(self, event):
+        try:
+            with open(self.celebrity_path, 'r') as csvfile:
+                fieldnames = ["name", "title", "introduction"]
+                reader = csv.DictReader(csvfile, fieldnames = fieldnames)
+                next(reader)
+                celebrity_list = [item for item in reader]
+                csvfile.close()
+
+            with open(self.movie_path, 'r') as csvfile:
+                fieldnames = ["name", "title", "introduction"]
+                reader = csv.DictReader(csvfile, fieldnames = fieldnames)
+                next(reader)
+                movie_list = [item for item in reader]
+                csvfile.close()
+
+            if browser.current_url.find("t=media/appmsg_edit&action=edit") == -1 and browser.current_url.find("t=media/appmsg_edit_v2&action=edit") == -1:
+                return wx.MessageBox('您不在编辑页面上！', '错误', wx.OK | wx.ICON_INFORMATION)
+
+            script = '''
+                var article_container = $($("iframe#ueditor_0")[0].contentWindow.document).children("html").children("body");
+                var article = null;
+                article_container.empty();
+            '''
+
+            for item in generate_full(celebrity_list = celebrity_list, movie_list = movie_list):
+                script += '''
+                    article = '%s';
+                    article_container.append($(article));
+                ''' % item
+
+                print '''
+                    article = '%s;
+                    article_container.append($(article));
+                ''' % item
+
+            browser.execute_script(script)
+
+        except:
+            wx.MessageBox('请提供有效的csv文件！', '错误', wx.OK | wx.ICON_INFORMATION)
 
 
-WebDriverWait(driver = browser, timeout = 600).until(passed)
-
-time.sleep(10)
-
-script = '''
-    var article_container = $($("iframe#ueditor_0")[0].contentWindow.document).children("html").children("body");
-    var article = null; 
-    article_container.empty();
-'''
-
-for item in generate_full(celebrity_list = celebrity_list, movie_list = movie_list):
-    script += '''
-        article = '%s';
-        article_container.append($(article));
-    ''' % item
-
-    print '''
-        article = '%s;
-        article_container.append($(article));
-    ''' % item
-
-browser.execute_script(script)
+app = wx.App(False)
+frame = my_frame(None, '幻历周刊生成器')
+frame.Show()
+app.MainLoop()
