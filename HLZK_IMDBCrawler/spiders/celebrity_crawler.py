@@ -26,7 +26,10 @@ class MovieSpider(scrapy.Spider):
         end = datetime.datetime.now().replace(year = 2016, month = int(end[:2]), day = int(end[-2:]))
         while start <= end:
             self.start_urls.append(url_pattern % (start.month, start.day))
-            start = start.replace(day = start.day + 1)
+            try:
+                start = start.replace(day = start.day + 1)
+            except ValueError:
+                start = start.replace(month = start.month + 1, day = 1)
         option = webdriver.ChromeOptions()
         option.add_argument("--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/59.0.3071.109 Chrome/59.0.3071.109 Safari/537.36")
         self.browser = webdriver.Chrome(options = option, executable_path = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chromedriver.exe")
@@ -52,11 +55,12 @@ class MovieSpider(scrapy.Spider):
         result_list = response.css("table.scifi-calendar-timeline tbody tr")
         for item_c in result_list:
             item = Celebrity(
-                year = item_c.css("td.timeline-year::text").extract()[0],
+                year = item_c.css("td.timeline-year::text").extract()[0].replace("　", ""),
                 event = clear_html("".join(item_c.css("td.timeline-content").extract())),
-                date = "".join(response.css("#firstHeading::text").extract())
+                date = "".join(response.css("#firstHeading::text").extract()).replace("　", "")
             )
             if item["event"].find("出生") != -1 or item["event"].find("逝世") != -1 or item["event"].find("去世") != -1 or item["event"].find("享年") != -1:
+                item["event"] = "%s年%s，%s" % (item["year"].replace(" ", ""), item["date"].replace(" ", ""), item["event"])
                 self.item_list.append(item)
 
     def closed(self, reason):

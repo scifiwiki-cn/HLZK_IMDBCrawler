@@ -64,6 +64,8 @@ class HlzkImdbcrawlerSpiderMiddleware(object):
                 content = f.read()
             f.close()
 
+            # time.sleep(1)
+
             return HtmlResponse(request.url, encoding = 'utf-8', body = content, request = request)
 
         spider.browser.get(request.url)
