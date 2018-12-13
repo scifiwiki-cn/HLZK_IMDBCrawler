@@ -8,29 +8,32 @@ import csv
 from scrapy import Request
 from selenium import webdriver
 
-from HLZK_IMDBCrawler.items import Celebrity
+from HLZK_IMDBCrawler.items import Celebrity, CelebrityStat
 import sys
 reload(sys)
 sys.setdefaultencoding('utf8')
 
 
 class MovieSpider(scrapy.Spider):
-    name = "celebrity"
+    name = "celebrity_stat"
     allowed_domains = ["www.scifi-wiki.com"]
 
-    def __init__(self, start = None, end = None, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super(MovieSpider, self).__init__(*args, **kwargs)
         url_pattern = "http://www.scifi-wiki.com/wiki/%d月%d日"
         self.start_urls = []
         self.interval = 0
-        start = datetime.datetime.now().replace(year = 2016, month = int(start[:2]), day = int(start[-2:]))
-        end = datetime.datetime.now().replace(year = 2016, month = int(end[:2]), day = int(end[-2:]))
+        start = datetime.datetime.now().replace(year = 2016, month = 1, day = 1, hour = 0, minute = 0, second = 0, microsecond = 0)
+        end = datetime.datetime.now().replace(year = 2016, month = 12, day = 31, hour = 0, minute = 0, second = 0, microsecond = 0)
         while start <= end:
-            self.start_urls.append(url_pattern % (start.month, start.day))
             try:
-                start = start.replace(day = start.day + 1)
+                self.start_urls.append(url_pattern % (start.month, start.day))
+                try:
+                    start = start.replace(day = start.day + 1)
+                except ValueError:
+                    start = start.replace(month = start.month + 1, day = 1)
             except ValueError:
-                start = start.replace(month = start.month + 1, day = 1)
+                break
         option = webdriver.ChromeOptions()
         option.add_argument("--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/59.0.3071.109 Chrome/59.0.3071.109 Safari/537.36")
         self.browser = webdriver.Chrome(options = option, executable_path = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chromedriver.exe")
@@ -55,13 +58,21 @@ class MovieSpider(scrapy.Spider):
 
         result_list = response.css("table.scifi-calendar-timeline tbody tr")
         for item_c in result_list:
-            item = Celebrity(
+            _date = "".join(response.css("#firstHeading::text").extract()).replace("　", "").replace(" ", "")
+            item = CelebrityStat(
+                name = "",
                 year = item_c.css("td.timeline-year::text").extract()[0].replace("　", ""),
+                month = _date[:_date.find(u'月')],
+                date = _date[_date.find('月') + 1:_date.find('日')],
                 event = clear_html("".join(item_c.css("td.timeline-content").extract())),
-                date = "".join(response.css("#firstHeading::text").extract()).replace("　", "")
+                country = ""
             )
-            if item["event"].find("出生") != -1 or item["event"].find("逝世") != -1 or item["event"].find("去世") != -1 or item["event"].find("享年") != -1:
-                item["event"] = "%s年%s，%s" % (item["year"].replace(" ", ""), item["date"].replace(" ", ""), item["event"])
+            if item["event"].find("出生") != -1:
+                clist = [u'中国', u'美国', u'英国', u'加拿大', u'俄罗斯', u'澳大利亚', u'日本', u'挪威', u'法国', u'德国', u'巴西', u'阿根廷']
+                for country in clist:
+                    if item['event'][:len(country)] == country:
+                        item['country'] = country
+                        break
                 self.item_list.append(item)
 
     def closed(self, reason):
@@ -70,9 +81,9 @@ class MovieSpider(scrapy.Spider):
         print reason
 
     def save_result(self):
-        with open('celebrity.csv', 'wb') as csvfile:
+        with open('celebrity_stat.csv', 'wb') as csvfile:
             csvfile.write(codecs.BOM_UTF8)
-            fieldnames = ['year', 'event', "date"]
+            fieldnames = ['year', 'month', "date", "name", 'country', 'event']
             writer = csv.DictWriter(csvfile, fieldnames = fieldnames)
             writer.writeheader()
             for item in self.item_list:

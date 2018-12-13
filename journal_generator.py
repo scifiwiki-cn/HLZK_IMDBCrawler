@@ -38,6 +38,7 @@ def generate_br():
 
 
 def generate_celebrity(celebrity):
+    print celebrity
     return '''
         <section class="" data-tools-id="14859" style="margin-top: 20px;max-width: 100%%;overflow: hidden;box-sizing: border-box !important;word-wrap: break-word !important;">
             <p style="margin-right: auto;margin-left: auto;padding: 8px;max-width: 100%%;min-height: 1em;border-width: 1px;border-style: solid;border-color: rgb(109, 116, 139);border-radius: 100%%;overflow: hidden;width: 209.46px;box-sizing: border-box !important;word-wrap: break-word !important;">
@@ -66,6 +67,7 @@ def generate_celebrity(celebrity):
 
 
 def generate_movie(movie):
+    print movie
     if "title" in movie and movie["title"].replace(" ", "") != "":
         movie["title"] = '''
             <p style="max-width: 100%%;min-height: 1em;text-align: center;box-sizing: border-box !important;word-wrap: break-word !important;">
@@ -73,7 +75,7 @@ def generate_movie(movie):
                     <strong style="max-width: 100%%;box-sizing: border-box !important;word-wrap: break-word !important;">%s</strong>
                 </span>
             </p>
-        '''
+        ''' % movie["title"]
     else:
         movie["title"] = ""
     return '''
@@ -123,21 +125,24 @@ def generate_full(celebrity_list, movie_list):
         result.append(generate_celebrity(celebrity))
     result.append(generate_br())
     result.append(generate_br())
-    result.append(generate_title("作品"))
-    for movie in movie_list:
-        result.append(generate_br())
-        result.append(generate_br())
-        result.append(generate_movie(movie))
+    if movie_list is not None:
+        result.append(generate_title("作品"))
+        for movie in movie_list:
+            result.append(generate_br())
+            result.append(generate_br())
+            result.append(generate_movie(movie))
     return [item.replace("\n", "").replace("%%", "%").strip() for item in result]
 
 
-option = webdriver.ChromeOptions()
-option.add_argument(
-    "--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/59.0.3071.109 Chrome/59.0.3071.109 Safari/537.36")
-browser = webdriver.Chrome(options = option,
-                           executable_path = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chromedriver.exe")
 
-browser.get('http://mp.weixin.qq.com')
+
+# option = webdriver.ChromeOptions()
+# option.add_argument(
+#     "--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/59.0.3071.109 Chrome/59.0.3071.109 Safari/537.36")
+# browser = webdriver.Chrome(options = option,
+#                            executable_path = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chromedriver.exe")
+#
+# browser.get('http://mp.weixin.qq.com')
 
 
 class my_frame(wx.Frame):
@@ -178,36 +183,42 @@ class my_frame(wx.Frame):
                 celebrity_list = [item for item in reader]
                 csvfile.close()
 
-            with open(self.movie_path, 'r') as csvfile:
-                fieldnames = ["name", "title", "introduction"]
-                reader = csv.DictReader(csvfile, fieldnames = fieldnames)
-                next(reader)
-                movie_list = [item for item in reader]
-                csvfile.close()
+            # with open(self.movie_path, 'r') as csvfile:
+            #     fieldnames = ["name", "title", "genre", "date", "introduction"]
+            #     reader = csv.DictReader(csvfile, fieldnames = fieldnames)
+            #     next(reader)
+            #     movie_list = [item for item in reader]
+            #     csvfile.close()
 
-            if browser.current_url.find("t=media/appmsg_edit&action=edit") == -1 and browser.current_url.find("t=media/appmsg_edit_v2&action=edit") == -1:
-                return wx.MessageBox('您不在编辑页面上！', '错误', wx.OK | wx.ICON_INFORMATION)
+            with open("result.txt", "wb") as f:
+                import re
+                f.write(re.sub("> +<", "><", "".join(generate_full(celebrity_list = celebrity_list, movie_list = None)).replace("\t", "")))
 
-            script = '''
-                var article_container = $($("iframe#ueditor_0")[0].contentWindow.document).children("html").children("body");
-                var article = null;
-                article_container.empty();
-            '''
+            #
+            # if browser.current_url.find("t=media/appmsg_edit&action=edit") == -1 and browser.current_url.find("t=media/appmsg_edit_v2&action=edit") == -1:
+            #     return wx.MessageBox('您不在编辑页面上！', '错误', wx.OK | wx.ICON_INFORMATION)
+            #
+            # script = '''
+            #     var article_container = $($("iframe#ueditor_0")[0].contentWindow.document).children("html").children("body");
+            #     var article = null;
+            #     article_container.empty();
+            # '''
+            #
+            # for item in generate_full(celebrity_list = celebrity_list, movie_list = movie_list):
+            #     script += '''
+            #         article = '%s';
+            #         article_container.append($(article));
+            #     ''' % item
+            #
+            #     # print '''
+            #     #     article = '%s;
+            #     #     article_container.append($(article));
+            #     # ''' % item
+            #
+            # browser.execute_script(script)
 
-            for item in generate_full(celebrity_list = celebrity_list, movie_list = movie_list):
-                script += '''
-                    article = '%s';
-                    article_container.append($(article));
-                ''' % item
-
-                print '''
-                    article = '%s;
-                    article_container.append($(article));
-                ''' % item
-
-            browser.execute_script(script)
-
-        except:
+        except Exception,e:
+            print e
             wx.MessageBox('请提供有效的csv文件！', '错误', wx.OK | wx.ICON_INFORMATION)
 
 

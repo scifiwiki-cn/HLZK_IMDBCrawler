@@ -18,7 +18,7 @@ class HlzkImdbcrawlerSpiderMiddleware(object):
     def from_crawler(cls, crawler):
         # This method is used by Scrapy to create your spiders.
         s = cls()
-        crawler.signals.connect(s.spider_opened, signal=signals.spider_opened)
+        crawler.signals.connect(s.spider_opened, signal = signals.spider_opened)
         return s
 
     def process_spider_input(self, response, spider):
@@ -59,8 +59,11 @@ class HlzkImdbcrawlerSpiderMiddleware(object):
     def process_request(self, request, spider):
 
         import os
-        if os.path.exists("cache/" + request.url.replace(":", "-").replace("?", "-").replace("&", "-").replace('/', "-") + ".html"):
-            with open("cache/" + request.url.replace(":", "-").replace("?", "-").replace("&", "-").replace('/', "-") + ".html", "rb") as f:
+        if os.path.exists("cache/" + request.url.replace(":", "-").replace("?", "-").replace("&", "-").replace('/',
+                                                                                                               "-") + ".html"):
+            with open("cache/" + request.url.replace(":", "-").replace("?", "-").replace("&", "-").replace('/',
+                                                                                                           "-") + ".html",
+                      "rb") as f:
                 content = f.read()
             f.close()
 
@@ -69,13 +72,22 @@ class HlzkImdbcrawlerSpiderMiddleware(object):
             return HtmlResponse(request.url, encoding = 'utf-8', body = content, request = request)
 
         spider.browser.get(request.url)
-        time.sleep(3)
+        time.sleep(spider.interval)
+
+        if hasattr(spider, "execute_script"):
+            try:
+                spider.execute_script()
+            except:
+                pass
+
         content = spider.browser.page_source
 
         if not os.path.isdir("cache"):
             os.mkdir("cache")
 
-        with open("cache/" + request.url.replace(":", "-").replace("?", "-").replace("&", "-").replace('/', "-") + ".html", "wb") as f:
+        with open("cache/" + request.url.replace(":", "-").replace("?", "-").replace("&", "-").replace('/',
+                                                                                                       "-") + ".html",
+                  "wb") as f:
             f.write(content)
         f.close()
 
@@ -91,7 +103,7 @@ class HlzkImdbcrawlerDownloaderMiddleware(object):
     def from_crawler(cls, crawler):
         # This method is used by Scrapy to create your spiders.
         s = cls()
-        crawler.signals.connect(s.spider_opened, signal=signals.spider_opened)
+        crawler.signals.connect(s.spider_opened, signal = signals.spider_opened)
         return s
 
     def process_request(self, request, spider):

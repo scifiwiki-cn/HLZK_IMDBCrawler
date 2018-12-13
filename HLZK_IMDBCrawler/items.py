@@ -31,3 +31,38 @@ class Celebrity(scrapy.Item):
     year = scrapy.Field()
     event = scrapy.Field()
     date = scrapy.Field()
+
+
+class CelebrityStat(scrapy.Item):
+    year = scrapy.Field()
+    name = scrapy.Field()
+    date = scrapy.Field()
+    month = scrapy.Field()
+    event = scrapy.Field()
+    country = scrapy.Field()
+
+
+class Book(scrapy.Item):
+    id = scrapy.Field()
+    title = scrapy.Field()
+    subtitle = scrapy.Field()
+    original_title = scrapy.Field()
+    link = scrapy.Field()
+    cover_link = scrapy.Field()
+    published = scrapy.Field()
+    isbn = scrapy.Field()
+    author = scrapy.Field()
+    translator = scrapy.Field()
+    producer = scrapy.Field()
+    price = scrapy.Field()
+    series = scrapy.Field()
+    published_at = scrapy.Field()
+    page = scrapy.Field()
+    decoration = scrapy.Field()
+    rating = scrapy.Field()
+    rating_distribution = scrapy.Field()
+    rater_count = scrapy.Field()
+    short_review_count = scrapy.Field()
+    long_review_count = scrapy.Field()
+    has_previous_version = scrapy.Field()
+    comments = scrapy.Field()

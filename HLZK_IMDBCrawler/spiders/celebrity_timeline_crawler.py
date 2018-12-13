@@ -5,7 +5,6 @@ import scrapy
 import datetime
 import csv
 
-from scrapy import Request
 from selenium import webdriver
 
 from HLZK_IMDBCrawler.items import Celebrity
@@ -15,22 +14,25 @@ sys.setdefaultencoding('utf8')
 
 
 class MovieSpider(scrapy.Spider):
-    name = "celebrity"
+    name = "celebrity_timeline"
     allowed_domains = ["www.scifi-wiki.com"]
 
-    def __init__(self, start = None, end = None, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super(MovieSpider, self).__init__(*args, **kwargs)
         url_pattern = "http://www.scifi-wiki.com/wiki/%d月%d日"
         self.start_urls = []
         self.interval = 0
-        start = datetime.datetime.now().replace(year = 2016, month = int(start[:2]), day = int(start[-2:]))
-        end = datetime.datetime.now().replace(year = 2016, month = int(end[:2]), day = int(end[-2:]))
+        start = datetime.datetime.now().replace(year = 2016, month = 1, day = 1)
+        end = datetime.datetime.now().replace(year = 2016, month = 12, day = 31)
         while start <= end:
             self.start_urls.append(url_pattern % (start.month, start.day))
             try:
                 start = start.replace(day = start.day + 1)
             except ValueError:
-                start = start.replace(month = start.month + 1, day = 1)
+                try:
+                    start = start.replace(month = start.month + 1, day = 1)
+                except ValueError:
+                    start = start.replace(year = start.year + 1, month = 1, day =1)
         option = webdriver.ChromeOptions()
         option.add_argument("--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/59.0.3071.109 Chrome/59.0.3071.109 Safari/537.36")
         self.browser = webdriver.Chrome(options = option, executable_path = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chromedriver.exe")
@@ -75,6 +77,7 @@ class MovieSpider(scrapy.Spider):
             fieldnames = ['year', 'event', "date"]
             writer = csv.DictWriter(csvfile, fieldnames = fieldnames)
             writer.writeheader()
+            self.item_list.sort(cmp = lambda i1, i2: int(i1["year"]) < int(i2["year"]))
             for item in self.item_list:
                 writer.writerow(item)
             csvfile.close()
