@@ -49,7 +49,7 @@ class Book(scrapy.Item):
     original_title = scrapy.Field()
     link = scrapy.Field()
     cover_link = scrapy.Field()
-    published = scrapy.Field()
+    publisher = scrapy.Field()
     isbn = scrapy.Field()
     author = scrapy.Field()
     translator = scrapy.Field()
@@ -66,3 +66,4 @@ class Book(scrapy.Item):
     long_review_count = scrapy.Field()
     has_previous_version = scrapy.Field()
     comments = scrapy.Field()
+    reader_count = scrapy.Field()

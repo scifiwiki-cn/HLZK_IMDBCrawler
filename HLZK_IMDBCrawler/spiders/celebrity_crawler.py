@@ -67,7 +67,7 @@ class MovieSpider(scrapy.Spider):
     def closed(self, reason):
         self.destroy_browser()
         self.save_result()
-        print reason
+        print(reason)
 
     def save_result(self):
         with open('celebrity.csv', 'wb') as csvfile:
